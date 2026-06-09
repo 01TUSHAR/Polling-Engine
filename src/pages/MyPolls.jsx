@@ -13,8 +13,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { storage } from '../utils/storage';
-
-const API_URL = 'http://localhost:5000/api';
+import { API_URL } from '../config/api';
 
 const statusConfig = {
     ACTIVE: {
@@ -236,4 +235,3 @@ const MyPolls = () => {
 };
 
 export default MyPolls;
-

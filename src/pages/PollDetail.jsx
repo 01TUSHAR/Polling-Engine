@@ -4,8 +4,7 @@ import { Loader2, ArrowLeft, Share2, Check, Clock, Users } from 'lucide-react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import { storage } from '../utils/storage';
-
-const API_URL = 'http://localhost:5000/api';
+import { API_URL, SOCKET_URL } from '../config/api';
 
 const PollDetail = () => {
     const { pollId } = useParams();
@@ -52,7 +51,7 @@ const PollDetail = () => {
 
     // Socket connection for real-time updates
     useEffect(() => {
-        const socket = io('http://localhost:5000');
+        const socket = io(SOCKET_URL);
         socket.emit('join-poll', pollId);
 
         socket.on('poll:update', (results) => {
@@ -254,4 +253,3 @@ const PollDetail = () => {
 };
 
 export default PollDetail;
-
