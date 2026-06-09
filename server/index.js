@@ -5,6 +5,7 @@ import cors from 'cors';
 import connectDB from './config/db.js';
 import socketConfig from './config/socket.js';
 import pollRoutes from "./routes/poll.routes.js";
+import voteRoutes from "./routes/vote.routes.js";
 
 // Initialize Express
 const app = express();
@@ -36,6 +37,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use("/api/polls", pollRoutes);
+app.use("/api/votes", voteRoutes);
 
 // Start Server
 const PORT = process.env.PORT || 5000;

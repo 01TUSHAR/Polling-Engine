@@ -5,6 +5,10 @@ const optionSchema = new mongoose.Schema({
         type: String,
         required: true,
         trim: true
+    },
+    voteCount: {
+        type: Number,
+        default: 0
     }
 })
 
@@ -41,6 +45,10 @@ const pollSchema = new mongoose.Schema({
         default: () =>
             new Date(Date.now() + 24 * 60 * 60 * 1000),
     },
+    totalVoteCount: {
+        type: Number,
+        default: 0
+    }
 }, { timestamps: true })
 
 const Poll = mongoose.model("Poll", pollSchema);

@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
-import { X, Plus, Trash2, Clock, Lock, Globe, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { X, Plus, Trash2, Clock, Lock, Globe, Loader2, Sparkles } from 'lucide-react';
 import axios from 'axios';
+import { storage } from '../utils/storage';
+
+const API_URL = 'http://localhost:5000/api';
 
 const CreatePollModal = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState(['', '']);
   const [privacy, setPrivacy] = useState('DEVICE');
   const [duration, setDuration] = useState('24');
   const [isCreating, setIsCreating] = useState(false);
 
-  const MAX_OPTIONS = 5;
+  const MAX_OPTIONS = 6;
 
   const addOption = () => {
     if (options.length < MAX_OPTIONS) {
@@ -34,29 +39,37 @@ const CreatePollModal = ({ isOpen, onClose }) => {
     setOptions(['', '']);
     setPrivacy('DEVICE');
     setDuration('24');
-    setIsCreating(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsCreating(true);
+    const validOptions = options.map(o => o.trim()).filter(o => o !== '');
+    
+    if (validOptions.length < 2) {
+        alert('Please provide at least 2 valid options.');
+        return;
+    }
 
+    setIsCreating(true);
     try {
       const expiresAt = new Date(Date.now() + parseInt(duration) * 60 * 60 * 1000);
 
       const payload = {
         question: question.trim(),
-        options: options.filter(o => o.trim() !== ''),
+        options: validOptions,
         duplicateCheck: privacy,
-        expiresAt: expiresAt
+        expiresAt: expiresAt,
+        creatorToken: storage.getCreatorUserToken()
       };
 
-      const response = await axios.post('http://localhost:5000/api/polls', payload);
+      const response = await axios.post(`${API_URL}/polls`, payload);
 
       if (response.data.success) {
-        console.log('Poll Created Successfully:', response.data.data);
+        const { pollId } = response.data.data;
+
         resetForm();
         onClose();
+        navigate(`/poll/${pollId}`);
       }
     } catch (error) {
       console.error('Failed to create poll:', error);
@@ -66,71 +79,77 @@ const CreatePollModal = ({ isOpen, onClose }) => {
     }
   };
 
- 
-
   if (!isOpen) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in"
       onClick={onClose}
     >
       <div
-        className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        className="glass border-white/10 w-full max-w-xl rounded-[2.5rem] shadow-[0_0_50px_-12px_rgba(99,102,241,0.25)] overflow-hidden scale-in-center"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
-          <h2 className="text-xl font-semibold text-white">Create New Poll</h2>
+        <div className="p-8 pb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                <Sparkles size={24} className="text-brand" /> Create New Poll
+            </h2>
+            <p className="text-slate-400 text-sm mt-1">Get real-time feedback in seconds</p>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 hover:bg-slate-800 rounded-full transition-colors text-slate-400 hover:text-white"
+            className="p-3 glass-hover rounded-2xl text-slate-400 hover:text-white"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Form */}
-        <form id="poll-form" onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+        <form id="poll-form" onSubmit={handleSubmit} className="p-8 pt-4 space-y-8 max-h-[75vh] overflow-y-auto custom-scrollbar">
           {/* Question */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-400">Poll Question</label>
+          <div className="space-y-3">
+            <label className="text-sm font-bold text-slate-400 uppercase tracking-widest pl-1">Question</label>
             <textarea
               required
               disabled={isCreating}
-              placeholder="What's on your mind?"
-              className="w-full bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all resize-none h-24 disabled:opacity-50"
+              placeholder="What do you want to ask?"
+              className="w-full bg-white/5 border border-white/5 rounded-2xl p-4 text-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand/40 transition-all resize-none h-28 disabled:opacity-50 font-medium"
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
             />
           </div>
 
           {/* Options */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium text-slate-400 flex items-center justify-between">
+          <div className="space-y-4">
+            <label className="text-sm font-bold text-slate-400 uppercase tracking-widest pl-1 flex items-center justify-between">
               Options
-              <span className="text-xs text-slate-500">{options.length}/{MAX_OPTIONS} options</span>
+              <span className="text-[10px] text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full">{options.length}/{MAX_OPTIONS} MAX</span>
             </label>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {options.map((option, index) => (
-                <div key={index} className="flex gap-2 group">
-                  <input
-                    required
-                    disabled={isCreating}
-                    placeholder={`Option ${index + 1}`}
-                    className="flex-1 bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all disabled:opacity-50"
-                    value={option}
-                    onChange={(e) => handleOptionChange(index, e.target.value)}
-                  />
+                <div key={index} className="flex gap-3 animate-fade-in group">
+                  <div className="flex-1 relative">
+                    <input
+                      required
+                      disabled={isCreating}
+                      placeholder={`Option ${index + 1}`}
+                      className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3.5 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand/40 transition-all disabled:opacity-50 font-medium pl-10"
+                      value={option}
+                      onChange={(e) => handleOptionChange(index, e.target.value)}
+                    />
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-slate-600" />
+                  </div>
                   {options.length > 2 && (
                     <button
                       type="button"
                       disabled={isCreating}
                       onClick={() => removeOption(index)}
-                      className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all disabled:opacity-50"
+                      className="p-3 text-slate-500 hover:text-red-400 glass-hover rounded-xl transition-all disabled:opacity-50"
                     >
-                      <Trash2 size={18} />
+                      <Trash2 size={20} />
                     </button>
                   )}
                 </div>
@@ -141,51 +160,47 @@ const CreatePollModal = ({ isOpen, onClose }) => {
                 type="button"
                 disabled={isCreating}
                 onClick={addOption}
-                className="w-full py-2 border-2 border-dashed border-slate-700 rounded-lg text-slate-400 hover:text-brand hover:border-brand/50 hover:bg-brand/5 transition-all flex items-center justify-center gap-2 text-sm font-medium disabled:opacity-50"
+                className="w-full py-3.5 border-2 border-dashed border-white/5 rounded-xl text-slate-400 hover:text-brand hover:border-brand/30 hover:bg-brand/5 transition-all flex items-center justify-center gap-2 text-sm font-bold disabled:opacity-50"
               >
-                <Plus size={16} /> Add Option
+                <Plus size={18} /> Add Another Option
               </button>
             )}
           </div>
 
-          {/* Settings Grid */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Privacy */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">Vote Restriction</label>
-              <div className="flex bg-slate-800/50 p-1 rounded-lg border border-slate-700">
-                <button
-                  type="button"
-                  disabled={isCreating}
-                  onClick={() => setPrivacy('IP')}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs transition-all ${privacy === 'IP' ? 'bg-brand text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'
-                    } disabled:opacity-50`}
-                  title="One vote per IP address"
-                >
-                  <Globe size={13} /> IP-Level
-                </button>
+          {/* Configuration Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <label className="text-sm font-bold text-slate-400 uppercase tracking-widest pl-1">Restriction</label>
+              <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/5">
                 <button
                   type="button"
                   disabled={isCreating}
                   onClick={() => setPrivacy('DEVICE')}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs transition-all ${privacy === 'DEVICE' ? 'bg-brand text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${privacy === 'DEVICE' ? 'bg-brand text-white shadow-xl shadow-brand/20' : 'text-slate-500 hover:text-slate-300'
                     } disabled:opacity-50`}
-                  title="One vote per device (browser session)"
                 >
-                  <Lock size={13} /> Device-Level
+                  <Lock size={14} /> Device
+                </button>
+                <button
+                  type="button"
+                  disabled={isCreating}
+                  onClick={() => setPrivacy('IP')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${privacy === 'IP' ? 'bg-brand text-white shadow-xl shadow-brand/20' : 'text-slate-500 hover:text-slate-300'
+                    } disabled:opacity-50`}
+                >
+                  <Globe size={14} /> IP Address
                 </button>
               </div>
             </div>
 
-            {/* Duration */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">Duration</label>
+            <div className="space-y-3">
+              <label className="text-sm font-bold text-slate-400 uppercase tracking-widest pl-1">Duration</label>
               <div className="relative">
                 <select
                   disabled={isCreating}
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
-                  className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-white appearance-none focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all text-sm disabled:opacity-50"
+                  className="w-full bg-white/5 border border-white/5 rounded-2xl px-4 py-3 text-white appearance-none focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand/40 transition-all text-sm font-bold disabled:opacity-50"
                 >
                   <option value="1">1 Hour</option>
                   <option value="6">6 Hours</option>
@@ -194,32 +209,34 @@ const CreatePollModal = ({ isOpen, onClose }) => {
                   <option value="48">2 Days</option>
                   <option value="168">7 Days</option>
                 </select>
-                <Clock className="absolute right-3 top-2.5 text-slate-500 pointer-events-none" size={14} />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                    <Clock size={16} />
+                </div>
               </div>
             </div>
           </div>
         </form>
 
         {/* Footer */}
-        <div className="p-6 border-t border-slate-800 bg-slate-900/50 flex gap-3">
+        <div className="p-8 border-t border-white/5 bg-white/[0.02] flex gap-4">
           <button
             type="button"
             disabled={isCreating}
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-slate-700 text-slate-300 font-medium hover:bg-slate-800 transition-all disabled:opacity-50"
+            className="flex-1 py-4 rounded-2xl glass glass-hover text-slate-300 font-bold text-sm disabled:opacity-50 transition-all"
           >
-            Cancel
+            Go Back
           </button>
           <button
             type="submit"
             form="poll-form"
             disabled={isCreating}
-            className="flex-1 py-2.5 rounded-xl bg-brand hover:bg-brand/90 text-white font-semibold shadow-lg shadow-brand/20 transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex-[2] py-4 rounded-2xl bg-brand hover:bg-brand-hover text-white font-bold shadow-2xl shadow-brand/20 transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isCreating ? (
-              <><Loader2 className="animate-spin" size={18} /> Launching...</>
+              <><Loader2 className="animate-spin" size={20} /> Deploying...</>
             ) : (
-              'Launch Poll'
+              'Launch Poll Now'
             )}
           </button>
         </div>
@@ -229,3 +246,4 @@ const CreatePollModal = ({ isOpen, onClose }) => {
 };
 
 export default CreatePollModal;
+
